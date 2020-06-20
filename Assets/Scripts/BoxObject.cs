@@ -51,7 +51,11 @@ public struct Box
         if (!IsWithin(start.z, end.z, min.z, max.z, ref fmin, ref fmax, 3, ref faceId))
             return false;
 
-        ratio = fmin;
+        if (faceId > 0)
+            ratio = fmin;
+        else
+            ratio = fmax;
+
         //Calculate the normal based on the faceId
         switch(math.abs(faceId))
         {

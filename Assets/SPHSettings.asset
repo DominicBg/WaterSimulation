@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55753b5a10dd74d4cb4a6a8c9f9f48f4, type: 3}
+  m_Name: SPHSettings
+  m_EditorClassIdentifier: 
+  particleRadius: 0.5
+  gravity:
+    x: 0
+    y: -9.81
+    z: 0
+  restDensity: 1
+  gasConstant: 1
+  mass: 1
+  viscosity: 1
+  collisionElasticity: 0.3

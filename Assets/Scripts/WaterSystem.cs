@@ -134,7 +134,8 @@ public class WaterSystem : MonoBehaviour
                 if (boxes[j].LineBoxIntersection(startPosition, nextPosition, out float ratio, out float3 normal))
                 {
                     particle.velocity = math.reflect(particle.velocity, normal) * elasticity;
-                    particle.position = math.lerp(startPosition, nextPosition, ratio);
+                    float3 dir = math.normalize(startPosition - nextPosition);
+                    particle.position = math.lerp(startPosition, nextPosition, ratio) + (dir * particleRadius);
                     break;
                 }
             }
@@ -252,10 +253,10 @@ public class WaterSystem : MonoBehaviour
     void RenderWater(float3 minPosition, float3 maxPosition)
     {
      
-        WaterMarchingCube.GenerateMesh(waterParticles, currentParticleCount, minPosition, maxPosition, marchingCubeResolution, ref mesh);
-        waterMeshFilter.mesh = mesh;
-         waterMeshFilter.transform.localScale = Vector3.one * cubeMarchineZone.size.x;
-        waterMeshFilter.transform.localPosition = -Vector3.one * cubeMarchineZone.size.x * 0.5f;
+        //WaterMarchingCube.GenerateMesh(waterParticles, currentParticleCount, minPosition, maxPosition, marchingCubeResolution, ref mesh);
+        //waterMeshFilter.mesh = mesh;
+        // waterMeshFilter.transform.localScale = Vector3.one * cubeMarchineZone.size.x;
+        //waterMeshFilter.transform.localPosition = -Vector3.one * cubeMarchineZone.size.x * 0.5f;
         //float3 diff = maxPosition - minPosition;
         //float scale = math.max(diff.x, math.max(diff.y, diff.z));
         //waterMeshFilter.transform.localScale = Vector3.one * scale;

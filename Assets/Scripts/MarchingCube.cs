@@ -46,7 +46,6 @@ public static class MarchingCube
         if (configIndex == 0 || configIndex == 255)
             return;
 
-        //refactor in a single loop
         for (int edgeIndex = 0; edgeIndex < MAXEDGE; edgeIndex++)
         {
             int index = MarchingCubeTables.TriangleTable[configIndex, edgeIndex];
@@ -62,22 +61,22 @@ public static class MarchingCube
             float3 vertexPosition = math.lerp(vertex1, vertex2, 0.5f) * scaleFactor;
 
             vertices.Add(vertexPosition);
-            triangles.Add(vertices.Count - 1);
-          
+            triangles.Add(vertices.Count - 1);      
         }
     }
 
     static int GetConfigIndex(int[] corners)
     {
         int configIndex = 0;
-        configIndex |= corners[0] << 0;
-        configIndex |= corners[1] << 1;
-        configIndex |= corners[2] << 2;
-        configIndex |= corners[3] << 3;
-        configIndex |= corners[4] << 4;
-        configIndex |= corners[5] << 5;
-        configIndex |= corners[6] << 6;
-        configIndex |= corners[7] << 7;
+        configIndex |= (int)math.sign(corners[0]) << 0;
+        configIndex |= (int)math.sign(corners[1]) << 1;
+        configIndex |= (int)math.sign(corners[2]) << 2;
+        configIndex |= (int)math.sign(corners[3]) << 3;
+        configIndex |= (int)math.sign(corners[4]) << 4;
+        configIndex |= (int)math.sign(corners[5]) << 5;
+        configIndex |= (int)math.sign(corners[6]) << 6;
+        configIndex |= (int)math.sign(corners[7]) << 7;
         return configIndex;
     }
+
 }

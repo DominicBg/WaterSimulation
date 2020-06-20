@@ -190,10 +190,10 @@ MonoBehaviour:
   m_RenderPipelineSettings:
     supportShadowMask: 1
     supportSSR: 0
-    supportSSAO: 1
+    supportSSAO: 0
     supportSubsurfaceScattering: 1
     increaseSssSampleCount: 0
-    supportVolumetrics: 1
+    supportVolumetrics: 0
     increaseResolutionOfVolumetrics: 0
     supportLightLayers: 0
     lightLayerName0: Light Layer default
@@ -211,7 +211,7 @@ MonoBehaviour:
     colorBufferFormat: 74
     supportCustomPass: 1
     customBufferFormat: 12
-    supportedLitShaderMode: 2
+    supportedLitShaderMode: 1
     supportDecals: 1
     msaaSampleCount: 1
     supportMotionVectors: 1
