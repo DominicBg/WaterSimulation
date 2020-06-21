@@ -11,9 +11,17 @@ public class SPHMarchingCubeRenderer : MonoBehaviour
     public int marchingCubeResolution;
     Mesh mesh;
 
+    public bool useBurst;
+
     private void Start()
     {
         mesh = new Mesh();
+        MarchingCubeTables.Initialize();
+    }
+    private void OnDestroy()
+    {
+        MarchingCubeTables.Dispose();
+        WaterMarchingCube.Dispose();
     }
 
     public void RenderWater(NativeArray<SPHSystem.WaterParticle> waterParticles)
@@ -21,7 +29,11 @@ public class SPHMarchingCubeRenderer : MonoBehaviour
         float3 minPosition = cubeMarchineZone.bounds.min;
         float3 maxPosition = cubeMarchineZone.bounds.max;
 
-        WaterMarchingCube.GenerateMesh(waterParticles, waterParticles.Length, minPosition, maxPosition, marchingCubeResolution, ref mesh);
+        if(useBurst)
+            WaterMarchingCube.GenerateMeshBurst(waterParticles, waterParticles.Length, minPosition, maxPosition, marchingCubeResolution, ref mesh);
+        else
+            WaterMarchingCube.GenerateMesh(waterParticles, waterParticles.Length, minPosition, maxPosition, marchingCubeResolution, ref mesh);
+       
         waterMeshFilter.mesh = mesh;
         waterMeshFilter.transform.localScale = Vector3.one * cubeMarchineZone.size.x;
         waterMeshFilter.transform.localPosition = -Vector3.one * cubeMarchineZone.size.x * 0.5f;

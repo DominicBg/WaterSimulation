@@ -1,11 +1,67 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
 public static class MarchingCubeTables
 {
-    public static int3[] CornerTable = new int3[8]
+    public static NativeArray<int3> NativeCornerTable;
+    public static NativeArray<int> NativeTriangleTable;
+    public static NativeArray<float3> NativeEdgeTable;
+    public const int EdgeWidth = 2;
+    public const int TriangleWidth = 16;
+
+    public static bool IsInitialized { get; private set; }
+
+    public static void Initialize()
+    {
+        NativeCornerTable = new NativeArray<int3>(CornerTable, Allocator.Persistent);
+
+        InitializeNativeTriangleTable();
+        InitializeNativeEdgeTable();
+
+    
+        IsInitialized = true;
+    }
+
+    private static void InitializeNativeTriangleTable()
+    {
+        NativeTriangleTable = new NativeArray<int>(TriangleTable.Length, Allocator.Persistent);
+        int rows = TriangleTable.GetLength(0);
+        int cols = TriangleTable.GetLength(1);
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < cols; col++)
+            {
+                NativeTriangleTable[row * cols + col] = TriangleTable[row, col];
+            }
+        }
+    }
+    private static void InitializeNativeEdgeTable()
+    {
+        NativeEdgeTable = new NativeArray<float3>(EdgeTable.Length, Allocator.Persistent);
+        int rows = EdgeTable.GetLength(0);
+        int cols = EdgeTable.GetLength(1);
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < cols; col++)
+            {
+                NativeEdgeTable[row * cols + col] = EdgeTable[row, col];
+            }
+        }
+    }
+
+
+    public static void Dispose()
+    {
+        NativeEdgeTable.Dispose();
+        NativeTriangleTable.Dispose();
+        NativeCornerTable.Dispose();
+        IsInitialized = false;
+    }
+
+    public readonly static int3[] CornerTable = new int3[8]
     {
         new int3(0, 0, 0),
         new int3(1, 0, 0),
@@ -17,7 +73,7 @@ public static class MarchingCubeTables
         new int3(0, 1, 1)
     };
 
-    public static float3[,] EdgeTable = new float3[12, 2]
+    public readonly static float3[,] EdgeTable = new float3[12, 2]
     {
         { new float3(0.0f, 0.0f, 0.0f), new float3(1.0f, 0.0f, 0.0f) },
         { new float3(1.0f, 0.0f, 0.0f), new float3(1.0f, 1.0f, 0.0f) },
@@ -31,10 +87,10 @@ public static class MarchingCubeTables
         { new float3(1.0f, 0.0f, 0.0f), new float3(1.0f, 0.0f, 1.0f) },
         { new float3(1.0f, 1.0f, 0.0f), new float3(1.0f, 1.0f, 1.0f) },
         { new float3(0.0f, 1.0f, 0.0f), new float3(0.0f, 1.0f, 1.0f) }
-
     };
 
-    public static int[,] TriangleTable = new int[,] 
+    
+    public readonly static int[,] TriangleTable = new int[,] 
     {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},

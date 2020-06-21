@@ -3,11 +3,17 @@ using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class BoxObject : MonoBehaviour
+public class BoxObject : MonoCollision
 {
-    public Box box;
+    Box box;
 
     public bool toggleToUpdate;
+
+    public override ICollision GetCollision()
+    {
+        return box;
+    }
+
     public void OnValidate()
     {
         quaternion invrotation = math.inverse(transform.rotation);
@@ -23,7 +29,7 @@ public class BoxObject : MonoBehaviour
 }
 
 [System.Serializable]
-public struct Box
+public struct Box : ICollision
 {
     public float3 position;
     public quaternion rotation;
@@ -31,7 +37,7 @@ public struct Box
     public float3 min;
     public float3 max;
 
-    public bool LineBoxIntersection(float3 start, float3 end, out float ratio, out float3 normal)
+    public bool TestCollision(float3 start, float3 end, out float ratio, out float3 normal)
     {
         start = math.mul(invrotation, position - start);
         end = math.mul(invrotation, position - end);

@@ -9,6 +9,7 @@ public class SPHSystem : MonoBehaviour
 {
     NativeArray<WaterParticle> waterParticles;
     NativeArray<Box> boxes;
+    NativeArray<Sphere> spheres;
 
     public SPHSettings settings;
     public SPHMarchingCubeRenderer waterRenderer;
@@ -20,20 +21,20 @@ public class SPHSystem : MonoBehaviour
 
     private void OnDestroy()
     {
+        Dispose();
+    }
+
+    void Dispose()
+    {
         waterParticles.Dispose();
         boxes.Dispose();
+        spheres.Dispose();
     }
 
     protected void Start()
     {      
         InitParticles();
-
-        BoxObject[] boxObjects = FindObjectsOfType<BoxObject>();
-        boxes = new NativeArray<Box>(boxObjects.Length, Allocator.Persistent);
-        for (int i = 0; i < boxObjects.Length; i++)
-        {
-            boxes[i] = boxObjects[i].box;
-        }
+        SetColliders();
     }
 
     private void InitParticles()
@@ -57,12 +58,31 @@ public class SPHSystem : MonoBehaviour
         }
     }
 
+    private void SetColliders()
+    {
+        BoxObject[] boxObjects = FindObjectsOfType<BoxObject>();
+        boxes = new NativeArray<Box>(boxObjects.Length, Allocator.Persistent);
+        for (int i = 0; i < boxObjects.Length; i++)
+        {
+            boxes[i] = (Box)boxObjects[i].GetCollision();
+        }
+
+        SphereObject[] sphereObjects = FindObjectsOfType<SphereObject>();
+        spheres = new NativeArray<Sphere>(sphereObjects.Length, Allocator.Persistent);
+        for (int i = 0; i < sphereObjects.Length; i++)
+        {
+            spheres[i] = (Sphere)sphereObjects[i].GetCollision();
+        }
+    }
+
+
     protected void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            waterParticles.Dispose();
+            Dispose();
             InitParticles();
+            SetColliders();
         }
         ComputeDensityPressureJob computeDensityPressure = new ComputeDensityPressureJob()
         {
@@ -92,6 +112,7 @@ public class SPHSystem : MonoBehaviour
         {
             deltaTime = Time.deltaTime,
             boxes = boxes,
+            spheres = spheres,
             collisionElasticity = settings.collisionElasticity,
             waterParticles = waterParticles,
             particleSize = settings.particleRadius,
@@ -199,6 +220,7 @@ public class SPHSystem : MonoBehaviour
         public float deltaTime;
         public NativeArray<WaterParticle> waterParticles;
         public NativeArray<Box> boxes;
+        public NativeArray<Sphere> spheres;
         public float collisionElasticity;
         public float particleSize;
 
@@ -209,25 +231,28 @@ public class SPHSystem : MonoBehaviour
 
             float3 previousPosition = currentParticle.position;
             float3 nextPosition = currentParticle.position + deltaTime * currentParticle.velocity;
-            //currentParticle.position += deltaTime * currentParticle.velocity;
+            
+            //Might get corrected by collision
+            currentParticle.position += deltaTime * currentParticle.velocity;
 
             //bound checking
-            bool hasCollision = false;
             for (int i = 0; i < boxes.Length; i++)
-            {
-                if(boxes[i].LineBoxIntersection(previousPosition, nextPosition, out float ratio, out float3 normal))
-                {
-                    currentParticle.velocity = math.reflect(currentParticle.velocity, normal) * collisionElasticity;
-                    currentParticle.position = previousPosition;//math.lerp(previousPosition, currentParticle.position, ratio) + (normal * particleSize * 1.1f);
-                    hasCollision = true;
-                    break;
-                }
-            }
+                if(boxes[i].TestCollision(previousPosition, nextPosition, out float ratio, out float3 normal))
+                    HandleCollision(ref currentParticle, previousPosition, nextPosition, ratio, normal);
 
-            if (!hasCollision)
-                currentParticle.position = nextPosition;
+
+            for (int i = 0; i < spheres.Length; i++)
+                if (spheres[i].TestCollision(previousPosition, nextPosition, out float ratio, out float3 normal))
+                    HandleCollision(ref currentParticle, previousPosition, nextPosition, ratio, normal);
+
 
             waterParticles[index] = currentParticle;
+        }
+
+        void HandleCollision(ref WaterParticle currentParticle, float3 previousPosition, float3 nextPosition, float ratio, float3 normal)
+        {
+            currentParticle.velocity = math.reflect(currentParticle.velocity, normal) * collisionElasticity;
+            currentParticle.position = previousPosition;//math.lerp(previousPosition, currentParticle.position, ratio) + (normal * particleSize * 1.1f);
         }
     }
 

@@ -81,7 +81,7 @@ public class WaterSystem : MonoBehaviour
         boxes = new Box[boxObjects.Length];
         for (int i = 0; i < boxObjects.Length; i++)
         {
-            boxes[i] = boxObjects[i].box;
+            //boxes[i] = boxObjects[i].box;
         }
 
         mesh = new Mesh();
@@ -131,7 +131,7 @@ public class WaterSystem : MonoBehaviour
 
             for (int j = 0; j < boxes.Length; j++)
             {
-                if (boxes[j].LineBoxIntersection(startPosition, nextPosition, out float ratio, out float3 normal))
+                if (boxes[j].TestCollision(startPosition, nextPosition, out float ratio, out float3 normal))
                 {
                     particle.velocity = math.reflect(particle.velocity, normal) * elasticity;
                     float3 dir = math.normalize(startPosition - nextPosition);
