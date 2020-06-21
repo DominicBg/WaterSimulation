@@ -16,13 +16,13 @@ public class WaterMarchingCube
 
    // static NativeArray<int> nativeMap;
    // static NativeArray<bool> nativeUsedGrid;
-    static NativeList<int3> nativeUsedIndices;
+  //  static NativeList<int3> nativeUsedIndices;
 
     public static void Dispose()
     {
      //   nativeMap.Dispose();
     //    nativeUsedGrid.Dispose();
-        nativeUsedIndices.Dispose();
+     //   nativeUsedIndices.Dispose();
     }
 
     /// <summary>
@@ -132,35 +132,15 @@ public class WaterMarchingCube
         Profiler.BeginSample("WaterMarchingCube");
 
         int resolutionCube = resolution * resolution * resolution;
-        //NativeArray<int> mapBurst = new NativeArray<int>(resolutionCube, Allocator.TempJob);
-        //NativeList<int3> usedIndicesBurst = new NativeList<int3>(Allocator.TempJob);
 
-        if (!nativeUsedIndices.IsCreated || nativeUsedIndices.Capacity != resolutionCube)
-        {
-            //nativeMap = new NativeArray<int>(resolutionCube, Allocator.Persistent);
-            //nativeUsedGrid = new NativeArray<bool>(resolutionCube, Allocator.Persistent);
-            nativeUsedIndices = new NativeList<int3>(resolutionCube, Allocator.Persistent);
-        }
-        else
-        {
-            //unsafe
-            //{
-            //    UnsafeUtility.MemClear(UnsafeUtility.AddressOf(ref nativeMap), (long)nativeMap.Length);
-            //    UnsafeUtility.MemClear(UnsafeUtility.AddressOf(ref nativeUsedGrid), (long)nativeUsedGrid.Length * sizeof(bool));
-            //}
+        var nativeMap = new NativeArray<int>(resolutionCube, Allocator.TempJob);
+        var nativeUsedIndices = new NativeList<int3>(resolutionCube, Allocator.TempJob);
 
-            nativeUsedIndices.Clear();
-        }
-         var nativeMap = new NativeArray<int>(resolutionCube, Allocator.TempJob);
-         var nativeUsedGrid = new NativeArray<bool>(resolutionCube, Allocator.TempJob);
-
-       
         float invResolution = 1f / resolution;
 
         FillMapJob fillMapJob = new FillMapJob()
         {
             map = nativeMap,
-            usedGrid = nativeUsedGrid,
             usedIndices = nativeUsedIndices,
             resolution = resolution,
             invResolution = invResolution,
@@ -174,7 +154,7 @@ public class WaterMarchingCube
         Profiler.EndSample();
         MarchingCube.CreateMeshData(nativeMap, nativeUsedIndices, resolution, invResolution, ref mesh);
         nativeMap.Dispose();
-        nativeUsedGrid.Dispose();
+        nativeUsedIndices.Dispose();
     }
 
     public struct FillMapJob : IJob
@@ -186,7 +166,6 @@ public class WaterMarchingCube
         public float3 minPosition;       
         public NativeArray<SPHSystem.WaterParticle> waterParticles;
         public NativeArray<int> map;
-        public NativeArray<bool> usedGrid;
         public NativeList<int3> usedIndices;
         
         public void Execute()
@@ -194,7 +173,7 @@ public class WaterMarchingCube
             float step = math.distance(maxPosition.x, minPosition.x) * invResolution;
             float invStep = 1f / step;
 
-            //NativeArray<bool> usedGrid = new NativeArray<bool>(resolution * resolution * resolution, Allocator.Temp);
+            NativeArray<bool> usedGrid = new NativeArray<bool>(resolution * resolution * resolution, Allocator.Temp);
 
             int count = waterParticles.Length;
             for (int i = 0; i < count; i++)
@@ -227,7 +206,7 @@ public class WaterMarchingCube
                     }
                 }
             }
-            //usedGrid.Dispose();
+            usedGrid.Dispose();
         }
     }
 
