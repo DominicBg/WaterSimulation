@@ -18,8 +18,12 @@ public static class MarchingCube
     static List<Vector3> vertices = new List<Vector3>(100);
 
 
-    public static void CreateMeshData(int[,,] map, NativeList<int3> usedIndices, float scaleFactor, ref Mesh mesh)
+    public static void CreateMeshData(float[,,] map, NativeList<int3> usedIndices, float scaleFactor, ref Mesh mesh)
     {
+        if (!MarchingCubeTables.IsInitialized)
+            MarchingCubeTables.Initialize();
+
+
         Profiler.BeginSample("MarchingCube");
 
         triangles.Clear();
@@ -39,9 +43,9 @@ public static class MarchingCube
         Profiler.EndSample();
     }
 
-    static void MarchCube(int3 index, int[,,] map, float scaleFactor, List<int> triangles, List<Vector3> vertices)
+    static void MarchCube(int3 index, float[,,] map, float scaleFactor, List<int> triangles, List<Vector3> vertices)
     {
-        NativeArray<int> corners = new NativeArray<int>(8, Allocator.Temp);
+        NativeArray<float> corners = new NativeArray<float>(8, Allocator.Temp);
         for (int j = 0; j < corners.Length; j++)
         {
             //int3 corner = index + MarchingCubeTables.CornerTable[j];
@@ -58,7 +62,7 @@ public static class MarchingCube
             return;
         }
 
-        const int maxEdges = 16;
+        const int maxEdges = 15;
         for (int edgeIndex = 0; edgeIndex < maxEdges; edgeIndex++)
         {
             //int triIndex = MarchingCubeTables.TriangleTable[configIndex, edgeIndex];
@@ -83,14 +87,15 @@ public static class MarchingCube
         }
         corners.Dispose();
     }
-    public static void CreateMeshData(NativeArray<int> map, NativeList<int3> usedIndices, int resolution, float scaleFactor, ref Mesh mesh)
+    public static void CreateMeshData(NativeArray<float> map, NativeList<int3> usedIndices, int resolution, float scaleFactor, ref Mesh mesh)
     {
         Profiler.BeginSample("MarchingCube");
 
         triangles.Clear();
         vertices.Clear();
 
-        NativeMultiHashMap<int, Triangle> triangleParralelList = new NativeMultiHashMap<int, Triangle>(resolution * resolution, Allocator.TempJob);
+       // NativeMultiHashMap<int, Triangle> triangleParralelList = new NativeMultiHashMap<int, Triangle>(resolution * resolution, Allocator.TempJob);
+        NativeArray<CubeTriangles> cubeTriangles = new NativeArray<CubeTriangles>(usedIndices.Length, Allocator.TempJob);
 
         MarchCubeJob marchCubeJob = new MarchCubeJob()
         {
@@ -101,25 +106,44 @@ public static class MarchingCube
             edgeTable = MarchingCubeTables.NativeEdgeTable,
             scaleFactor = scaleFactor,
             resolution = resolution,
-            triangleVertices = triangleParralelList.AsParallelWriter()
+            cubeTriangles = cubeTriangles,
+            //triangleVertices = triangleParralelList.AsParallelWriter()
         };
         marchCubeJob.Run(usedIndices.Length);
 
-        var nativeVertices = triangleParralelList.GetValueArray(Allocator.Temp);
-        for (int i = 0; i < nativeVertices.Length; i++)
+
+        for (int i = 0; i < cubeTriangles.Length; i++)
         {
-            vertices.Add(nativeVertices[i].vertex1);
-            triangles.Add(vertices.Count - 1);
+            for (int j = 0; j < cubeTriangles[i].triCount; j++)
+            {
+                Triangle triangle = cubeTriangles[i].GetTriangle(j);
+                vertices.Add(triangle.vertex1);
+                triangles.Add(vertices.Count - 1);
 
-            vertices.Add(nativeVertices[i].vertex2);
-            triangles.Add(vertices.Count - 1);
+                vertices.Add(triangle.vertex2);
+                triangles.Add(vertices.Count - 1);
 
-            vertices.Add(nativeVertices[i].vertex3);
-            triangles.Add(vertices.Count - 1);
+                vertices.Add(triangle.vertex3);
+                triangles.Add(vertices.Count - 1);
+            }
         }
 
-        triangleParralelList.Dispose();
 
+        //var nativeVertices = triangleParralelList.GetValueArray(Allocator.Temp);
+        //for (int i = 0; i < nativeVertices.Length; i++)
+        //{
+        //    vertices.Add(nativeVertices[i].vertex1);
+        //    triangles.Add(vertices.Count - 1);
+
+        //    vertices.Add(nativeVertices[i].vertex2);
+        //    triangles.Add(vertices.Count - 1);
+
+        //    vertices.Add(nativeVertices[i].vertex3);
+        //    triangles.Add(vertices.Count - 1);
+        //}
+
+        //triangleParralelList.Dispose();
+        cubeTriangles.Dispose();
         mesh.Clear();
         mesh.SetVertices(vertices);
         mesh.SetTriangles(triangles, 0);
@@ -132,7 +156,7 @@ public static class MarchingCube
     public struct MarchCubeJob : IJobParallelFor
     {
         public NativeArray<int3> indices;
-        [ReadOnly] public NativeArray<int> map;
+        [ReadOnly] public NativeArray<float> map;
         [ReadOnly] public NativeArray<int3> cornerTable;
         [ReadOnly] public NativeArray<int> triangleTable;
         [ReadOnly] public NativeArray<float3> edgeTable;
@@ -140,13 +164,15 @@ public static class MarchingCube
         public float scaleFactor;
         public int resolution;
 
-        public NativeMultiHashMap<int, Triangle>.ParallelWriter triangleVertices;
+        //public NativeMultiHashMap<int, Triangle>.ParallelWriter triangleVertices;
+        public NativeArray<CubeTriangles> cubeTriangles;
+
 
         public void Execute(int threadIndex)
         {
             int3 index = indices[threadIndex];
 
-            NativeArray<int> corners = new NativeArray<int>(8, Allocator.Temp);
+            NativeArray<float> corners = new NativeArray<float>(8, Allocator.Temp);
             for (int j = 0; j < corners.Length; j++)
             {
                 int3 corner = index + cornerTable[j];
@@ -163,6 +189,7 @@ public static class MarchingCube
                 return;
             }
 
+            CubeTriangles cubeTriangle = new CubeTriangles();
             int edgeIndex = 0;
             for (int i = 0; i < MAXEDGE; i++)
             {
@@ -203,13 +230,65 @@ public static class MarchingCube
                 }
                 if (addTriangle)
                 {
+                    cubeTriangle.AddTriangle(triangle);
                     //generate unique hash index
-                    const int separator = 10;
-                    int hashIndex = triangleVertices.m_ThreadIndex * separator + i;
-                    triangleVertices.Add(hashIndex, triangle);
+                    //const int separator = 4;
+                    //int hashIndex = triangleVertices.m_ThreadIndex * separator + i;
+                    //triangleVertices.Add(hashIndex, triangle);
                 }
             }
+            cubeTriangles[threadIndex] = cubeTriangle;
             corners.Dispose();
+        }
+    }
+
+    public struct CubeTriangles
+    {
+        public int triCount;
+        public Triangle triangle1;
+        public Triangle triangle2;
+        public Triangle triangle3;
+        public Triangle triangle4;
+
+        public void AddTriangle(Triangle triangle)
+        {
+            SetTriangle(triCount, triangle);
+            triCount++;
+        }
+
+        public Triangle GetTriangle(int index)
+        {
+            switch (index)
+            {
+                case 0:
+                    return triangle1;
+                case 1:
+                    return triangle2;
+                case 2:
+                    return triangle3;
+                case 3:
+                    return triangle4;
+            }
+            return triangle1;
+        }
+
+        public void SetTriangle(int index, Triangle triangle)
+        {
+            switch (index)
+            {
+                case 0:
+                    triangle1 = triangle;
+                    break;
+                case 1:
+                    triangle2 = triangle;
+                    break;
+                case 2:
+                    triangle3 = triangle;
+                    break;
+                case 3:
+                    triangle4 = triangle;
+                    break;
+            }
         }
     }
 
@@ -236,6 +315,21 @@ public static class MarchingCube
     }
 
     static int GetConfigIndex(NativeArray<int> corners)
+    {
+        int configIndex = 0;
+        configIndex |= (int)math.sign(corners[0]) << 0;
+        configIndex |= (int)math.sign(corners[1]) << 1;
+        configIndex |= (int)math.sign(corners[2]) << 2;
+        configIndex |= (int)math.sign(corners[3]) << 3;
+        configIndex |= (int)math.sign(corners[4]) << 4;
+        configIndex |= (int)math.sign(corners[5]) << 5;
+        configIndex |= (int)math.sign(corners[6]) << 6;
+        configIndex |= (int)math.sign(corners[7]) << 7;
+        return configIndex;
+    }
+
+
+    static int GetConfigIndex(NativeArray<float> corners)
     {
         int configIndex = 0;
         configIndex |= (int)math.sign(corners[0]) << 0;

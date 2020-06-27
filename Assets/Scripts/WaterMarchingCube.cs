@@ -12,18 +12,7 @@ using UnityEngine.Profiling;
 public class WaterMarchingCube
 {
     static bool[,,] usedGrid;
-    static int[,,] map;
-
-   // static NativeArray<int> nativeMap;
-   // static NativeArray<bool> nativeUsedGrid;
-  //  static NativeList<int3> nativeUsedIndices;
-
-    public static void Dispose()
-    {
-     //   nativeMap.Dispose();
-    //    nativeUsedGrid.Dispose();
-     //   nativeUsedIndices.Dispose();
-    }
+    static float[,,] map;
 
     /// <summary>
     /// Fills the Mesh based on the waterParticle[]
@@ -34,7 +23,7 @@ public class WaterMarchingCube
         if (usedGrid == null || usedGrid.Length != resolutionCube)
         {
             usedGrid = new bool[resolution, resolution, resolution];
-            map = new int[resolution, resolution, resolution];
+            map = new float[resolution, resolution, resolution];
         }
         else
         {
@@ -82,7 +71,7 @@ public class WaterMarchingCube
         if (usedGrid == null || usedGrid.Length != resolutionCube)
         {
             usedGrid = new bool[resolution, resolution, resolution];
-            map = new int[resolution, resolution, resolution];
+            map = new float[resolution, resolution, resolution];
         }
         else
         {
@@ -133,7 +122,7 @@ public class WaterMarchingCube
 
         int resolutionCube = resolution * resolution * resolution;
 
-        var nativeMap = new NativeArray<int>(resolutionCube, Allocator.TempJob);
+        var nativeMap = new NativeArray<float>(resolutionCube, Allocator.TempJob);
         var nativeUsedIndices = new NativeList<int3>(resolutionCube, Allocator.TempJob);
 
         float invResolution = 1f / resolution;
@@ -146,8 +135,7 @@ public class WaterMarchingCube
             invResolution = invResolution,
             maxPosition = maxPosition,
             minPosition = minPosition,
-            waterParticles = waterParticles,
-            
+            waterParticles = waterParticles,           
         };
         fillMapJob.Run();
 
@@ -165,7 +153,7 @@ public class WaterMarchingCube
         public float3 maxPosition;
         public float3 minPosition;       
         public NativeArray<SPHSystem.WaterParticle> waterParticles;
-        public NativeArray<int> map;
+        public NativeArray<float> map;
         public NativeList<int3> usedIndices;
         
         public void Execute()
@@ -181,10 +169,19 @@ public class WaterMarchingCube
                 int3 index = GetPositionIndex(waterParticles[i].position, minPosition, maxPosition, resolution, invStep);
                 int indexFlat = GetFlatIndex(index, resolution);
 
-                //Multiple particle will be in the same grid, don't recompute 
-                if (map[indexFlat] != 1)
-                {
-                    map[indexFlat] = 1;
+                //if (map[indexFlat] == 0)
+               // {
+
+                    //for (int j = 0; j < MarchingCubeTables.CornerTable.Length; j++)
+                    //{
+                    //    int3 conerIndex = index + MarchingCubeTables.CornerTable[j];
+                    //    int cornerIndexFlat = GetFlatIndex(conerIndex, resolution);
+                    //    if (!usedGrid[cornerIndexFlat])
+                    //    {
+                    //        usedIndices.Add(conerIndex);
+                    //        usedGrid[cornerIndexFlat] = true;
+                    //    }
+                    //}
 
                     //Only calculate marching cube for the 8 corners per cube
                     for (int j = 0; j < MarchingCubeTables.CornerTable.Length; j++)
@@ -204,7 +201,10 @@ public class WaterMarchingCube
                             usedGrid[cornerIndex2Flat] = true;
                         }
                     }
-                }
+               // }
+
+                map[indexFlat] = 1;
+
             }
             usedGrid.Dispose();
         }

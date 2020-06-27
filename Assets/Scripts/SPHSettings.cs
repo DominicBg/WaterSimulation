@@ -15,15 +15,17 @@ public class SPHSettings : ScriptableObject
     public float collisionElasticity = .5f;
     public float POLY6 ()
     {
-        return 315f / (65f * math.PI* math.pow(particleRadius, 9f));      
+        return 315f / (64f * math.PI* math.pow(particleRadius, 9f));      
     }
     public float CalculateSpikyGrad()
     {
-        return -45f / (math.PI * math.pow(particleRadius, 6f));
+       // return -45f / (math.PI * math.pow(particleRadius, 6f));
+        return 15f / (math.PI * math.pow(particleRadius, 6f));
     }
 
     public float CalculateViscosityKernel()
     {
         return 45f / (math.PI * math.pow(particleRadius, 6f));
+        //return 15 / (2*math.PI * math.pow(particleRadius, 3f));
     }
 }

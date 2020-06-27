@@ -21,7 +21,6 @@ public class SPHMarchingCubeRenderer : MonoBehaviour
     private void OnDestroy()
     {
         MarchingCubeTables.Dispose();
-        WaterMarchingCube.Dispose();
     }
 
     public void RenderWater(NativeArray<SPHSystem.WaterParticle> waterParticles)
