@@ -13,6 +13,7 @@ public class SPHSystem2DBurst : MonoBehaviour
     public float2 startPos = new float2(0, 5);
     int count;
 
+    public SPH2DRenderer SPH2DRenderer;
     NativeArray<WaterParticle2D> particles;
     private void Start()
     {
@@ -49,27 +50,48 @@ public class SPHSystem2DBurst : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space))
         {
             Restart();
         }
 
+        NativeMultiHashMap<int, int> hashMap = new NativeMultiHashMap<int, int>(particles.Length, Allocator.TempJob);
+        NativeArray<int2> cellOffset = new NativeArray<int2>(GridHashUtilities.cell2DOffsets, Allocator.TempJob);
+
         CalculateConst();
+
+        new HashPositionJob()
+        {
+            hashMap = hashMap.AsParallelWriter(),
+            particles = particles,
+            radius = particleRadius
+        }.Run(particles.Length);
+
         new ComputeDensityPressureJob()
         {
-            GAS_CONST = GAS_CONST,
-            particleRadiusSquared = particleRadiusSquared,
-            MASS = MASS,
             particles = particles,
+            particleRadius = particleRadius,
+            particleRadiusSquared = particleRadius * particleRadius,
+            hashMap = hashMap,
+            cellOffset = cellOffset,
+
+            //Consts
+            GAS_CONST = GAS_CONST,
+            MASS = MASS,
             POLY6 = POLY6,
             REST_DENS = REST_DENS
         }.Run(particles.Length);
 
         ComputeForceJob computeForceJob = new ComputeForceJob()
         {
-            G = G,
+            hashMap = hashMap,
+            cellOffset = cellOffset,
+
             particleRadius = particleRadius,
-            particleRadiusSquared = particleRadiusSquared,
+            particleRadiusSquared = particleRadius * particleRadius,
+
+            //consts
+            GRAVITY = G,
             MASS = MASS,
             particles = particles,
             SPIKY_GRAD = SPIKY_GRAD,
@@ -77,19 +99,24 @@ public class SPHSystem2DBurst : MonoBehaviour
             VISC_LAP = VISC_LAP
         };
         computeForceJob.Run(particles.Length);
-        
+
         new IntegrateJob()
         {
             particles = particles,
-            BOUND_DAMPING = BOUND_DAMPING,
-            EPS = EPS,
             particleRadius = particleRadius,
+            deltaTime = Time.deltaTime,
+            
+            //Consts
+            BOUND_DAMPING = BOUND_DAMPING,
             VIEW_HEIGHT = VIEW_HEIGHT,
             VIEW_WIDTH = VIEW_WIDTH,
-            deltaTime = Time.deltaTime
         }.Run(particles.Length);
 
+        hashMap.Dispose();
+        cellOffset.Dispose();
         //CalculateStats();
+
+        SPH2DRenderer.ShowParticleEffect(particles);
     }
 
     void CalculateStats()
@@ -108,35 +135,69 @@ public class SPHSystem2DBurst : MonoBehaviour
         Debug.Log($"Mean Density {density}, mean pressure {pressure}");
     }
 
+
+    [BurstCompile]
+    public struct HashPositionJob : IJobParallelFor
+    {
+        public NativeMultiHashMap<int, int>.ParallelWriter hashMap;
+        public float radius;
+        public NativeArray<WaterParticle2D> particles;
+
+        public void Execute(int index)
+        {
+            float2 position = particles[index].position;
+            int hash = GridHashUtilities.Hash(position, radius);
+            hashMap.Add(hash, index);
+        }
+    }
+
     [BurstCompile]
     public struct ComputeDensityPressureJob : IJobParallelFor
     {
         public NativeArray<WaterParticle2D> particles;
+        [ReadOnly] public NativeMultiHashMap<int, int> hashMap;
+        public NativeArray<int2> cellOffset;
+
+        public float particleRadius;
         public float particleRadiusSquared;
+
+        //Consts
         public float MASS;
         public float POLY6;
         public float GAS_CONST;
         public float REST_DENS;
 
-        public void Execute(int i)
+        public void Execute(int index)
         {
-            WaterParticle2D pi = particles[i];
+            WaterParticle2D pi = particles[index];
             pi.density = 0;
-            for (int j = 0; j < particles.Length; j++)
-            {
-                WaterParticle2D pj = particles[j];
-                float2 rij = pj.position - pi.position;
-                float distanceSq = math.lengthsq(rij);
-                if (distanceSq < particleRadiusSquared)
-                {
-                    float squaredRatio = particleRadiusSquared - distanceSq;
-                    pi.density += MASS * POLY6 * squaredRatio * squaredRatio * squaredRatio;
-                }
 
+            for (int i = 0; i < cellOffset.Length; i++)
+            {
+                float2 position = pi.position + (float2)cellOffset[i] * particleRadius;
+                int bucketIndex = GridHashUtilities.Hash(position, particleRadius);
+
+                NativeMultiHashMapIterator<int> iterator;
+                bool hasValue = hashMap.TryGetFirstValue(bucketIndex, out int j, out iterator);
+                
+                while(hasValue)
+                {
+                    WaterParticle2D pj = particles[j];
+
+                    float2 diff = pj.position - pi.position;
+                    float distanceSq = math.lengthsq(diff);
+                    if (distanceSq < particleRadiusSquared)
+                    {
+                        float squaredRatio = particleRadiusSquared - distanceSq;
+                        pi.density += MASS * POLY6 * squaredRatio * squaredRatio * squaredRatio;
+                    }
+
+                    hasValue = hashMap.TryGetNextValue(out j, ref iterator);
+                }
             }
-            //pi.p = GAS_CONST2 * (math.pow(pi.rho / REST_DENS, 7) - 1);
+
             pi.pressure = GAS_CONST * (pi.density - REST_DENS);
-            particles[i] = pi;        
+            particles[index] = pi;        
         }
     }
 
@@ -145,40 +206,60 @@ public class SPHSystem2DBurst : MonoBehaviour
     public struct ComputeForceJob : IJobParallelFor
     {
         public NativeArray<WaterParticle2D> particles;
+        [ReadOnly] public NativeMultiHashMap<int, int> hashMap;
+        public NativeArray<int2> cellOffset;
+
         public float particleRadius;
         public float particleRadiusSquared;
         public float MASS;
         public float SPIKY_GRAD;
         public float VISC;
         public float VISC_LAP;
-        public float2 G;
+        public float2 GRAVITY;
 
-        public void Execute(int i)
+        public void Execute(int index)
         {
-            float2 fpress = 0;
-            float2 fvisc = 0;
+            float2 forcePressure = 0;
+            float2 forceViscosity = 0;
 
-            WaterParticle2D pi = particles[i];
-            for (int j = 0; j < particles.Length; j++)
+            WaterParticle2D pi = particles[index];
+
+            for (int i = 0; i < cellOffset.Length; i++)
             {
-                WaterParticle2D pj = particles[j];
-                if (i == j)
-                    continue;
+                float2 position = pi.position + (float2)cellOffset[i] * particleRadius;
+                int bucketIndex = GridHashUtilities.Hash(position, particleRadius);
 
-                float2 rij = pj.position - pi.position;
-                float rSq = math.lengthsq(rij);
-                if(rSq < particleRadiusSquared)
+                NativeMultiHashMapIterator<int> iterator;
+                bool hasValue = hashMap.TryGetFirstValue(bucketIndex, out int j, out iterator);
+
+                while (hasValue)
                 {
-                    float r = math.sqrt(rSq);
-                    float radiusRatio = particleRadius - r;
-                    fpress += -math.normalize(rij) * MASS * (pi.pressure + pj.pressure) / (2f * pj.density) * SPIKY_GRAD * radiusRatio * radiusRatio;
-                    fvisc += VISC * MASS * (pj.velocity - pi.velocity) / pj.density * VISC_LAP * (particleRadius - r);
+                    if (index == j)
+                    {
+                        hasValue = hashMap.TryGetNextValue(out j, ref iterator);
+                        continue;
+                    }
+
+                    WaterParticle2D pj = particles[j];
+                    float2 diff = pj.position - pi.position;
+
+                    float radiusSquared = math.lengthsq(diff);
+                    if (radiusSquared < particleRadiusSquared)
+                    {
+                        float radius = math.sqrt(radiusSquared);
+                        float radiusRatio = particleRadius - radius;
+                        float2 normalizedDir = diff / radius;
+
+                        forcePressure += -normalizedDir * MASS * (pi.pressure + pj.pressure) / (2f * pj.density) * SPIKY_GRAD * radiusRatio * radiusRatio;
+                        forceViscosity += VISC * MASS * (pj.velocity - pi.velocity) / pj.density * VISC_LAP * (particleRadius - radius);
+                    }
+                    hasValue = hashMap.TryGetNextValue(out j, ref iterator);
                 }
             }
 
-            float2 fgrav = G * pi.density;
-            pi.force = fpress + fvisc + fgrav;
-            particles[i] = pi;
+            float2 forceFravity = GRAVITY * pi.density;
+            pi.force = forcePressure + forceViscosity + forceFravity;
+            particles[index] = pi;
         }
     }
 
@@ -186,10 +267,10 @@ public class SPHSystem2DBurst : MonoBehaviour
     public struct IntegrateJob : IJobParallelFor
     {
         public NativeArray<WaterParticle2D> particles;
+
         public float particleRadius;
         public float VIEW_WIDTH;
         public float VIEW_HEIGHT;
-        public float EPS;
         public float BOUND_DAMPING;
         public float deltaTime;
         public void Execute(int i)
@@ -198,25 +279,25 @@ public class SPHSystem2DBurst : MonoBehaviour
             p.velocity += deltaTime * p.force / p.density;
             p.position += deltaTime * p.velocity;
 
-            if (p.position.x - EPS < 0.0f)
+            if (p.position.x - particleRadius < 0.0f)
             {
                 p.velocity.x *= BOUND_DAMPING;
-                p.position.x = EPS;
+                p.position.x = particleRadius;
             }
-            if (p.position.x + EPS > VIEW_WIDTH)
+            if (p.position.x + particleRadius > VIEW_WIDTH)
             {
                 p.velocity.x *= BOUND_DAMPING;
-                p.position.x = VIEW_WIDTH - EPS;
+                p.position.x = VIEW_WIDTH - particleRadius;
             }
-            if (p.position.y - EPS < 0.0f)
+            if (p.position.y - particleRadius < 0.0f)
             {
                 p.velocity.y *= BOUND_DAMPING;
-                p.position.y = EPS;
+                p.position.y = particleRadius;
             }
-            if (p.position.y + EPS > VIEW_HEIGHT)
+            if (p.position.y + particleRadius > VIEW_HEIGHT)
             {
                 p.velocity.y *= BOUND_DAMPING;
-                p.position.y = VIEW_HEIGHT - EPS;
+                p.position.y = VIEW_HEIGHT - particleRadius;
             }
             particles[i] = p;
         }
@@ -237,8 +318,6 @@ public class SPHSystem2DBurst : MonoBehaviour
     float VISC_LAP;
     float POLY6;
     float SPIKY_GRAD;
-    float particleRadiusSquared;
-    float EPS;
 
     private void OnDrawGizmos()
     {
@@ -252,8 +331,6 @@ public class SPHSystem2DBurst : MonoBehaviour
     void CalculateConst()
     {
         POLY6 = 315f / (65f * math.PI* math.pow(particleRadius, 9f));
-        particleRadiusSquared = particleRadius * particleRadius;
-        EPS = particleRadius;
         SPIKY_GRAD = -45f / (math.PI * math.pow(particleRadius, 6f));
         VISC_LAP = 45f / (math.PI * math.pow(particleRadius, 6f));
     }
