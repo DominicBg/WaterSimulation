@@ -350,26 +350,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   count2:
-    x: 25
-    y: 25
+    x: 100
+    y: 100
   scale:
-    x: 1
-    y: 1
+    x: 0.3
+    y: 0.3
   startPos:
-    x: 0
+    x: 75
     y: 5
+  iterationPerFrame: 4
   SPH2DRenderer: {fileID: 2108176016}
   G:
     x: 0
     y: -9.81
-  particleRadius: 1.6
+  particleRadius: 0.5
   MASS: 6.5
   BOUND_DAMPING: -0.5
-  REST_DENS: 75
-  GAS_CONST: 25
-  VISC: 25
-  VIEW_HEIGHT: 75
-  VIEW_WIDTH: 75
+  REST_DENS: 25
+  GAS_CONST: 125
+  VISC: 14
+  VIEW_HEIGHT: 250
+  VIEW_WIDTH: 125
   DT: 0.0008
   GAS_CONST2: 1.5
 --- !u!4 &803143458
@@ -531,7 +532,7 @@ MonoBehaviour:
       enableBigTilePrepass: 0
       isFptlEnabled: 0
   clearColorMode: 1
-  backgroundColorHDR: {r: 1, g: 0.10410543, b: 0, a: 0}
+  backgroundColorHDR: {r: 0, g: 0, b: 0, a: 0}
   clearDepth: 1
   volumeLayerMask:
     serializedVersion: 2
@@ -728,6 +729,73 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1786980556
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1786980558}
+  - component: {fileID: 1786980557}
+  m_Layer: 0
+  m_Name: SPH System burst (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1786980557
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1786980556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 003dade664566524a98ce3e7f98e219d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  count2:
+    x: 200
+    y: 200
+  scale:
+    x: 1
+    y: 1
+  startPos:
+    x: 0
+    y: 5
+  iterationPerFrame: 0
+  SPH2DRenderer: {fileID: 2108176016}
+  G:
+    x: 0
+    y: -9.81
+  particleRadius: 1.6
+  MASS: 6.5
+  BOUND_DAMPING: -0.5
+  REST_DENS: 75
+  GAS_CONST: 25
+  VISC: 25
+  VIEW_HEIGHT: 1000
+  VIEW_WIDTH: 1000
+  DT: 0.0008
+  GAS_CONST2: 1.5
+--- !u!4 &1786980558
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1786980556}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -15.157818, y: -26.304682, z: -14.7986965}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 7
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2032366017
 GameObject:
   m_ObjectHideFlags: 0
@@ -909,7 +977,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 5500
   m_UseColorTemperature: 1
-  m_BoundingSphereOverride: {x: 7.2130683e+22, y: 5.829064e-10, z: 1.170528e-19, w: 58569856}
+  m_BoundingSphereOverride: {x: 5.84e-43, y: -5.858882e-10, z: 5.84e-43, w: -9.818439e-10}
   m_UseBoundingSphereOverride: 0
   m_ShadowRadius: 0
   m_ShadowAngle: 0.53
@@ -959,7 +1027,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   particleSystem: {fileID: 2108176019}
-  particleRadius: 1
+  particleRadius: 5
   color: {r: 0.4009434, g: 0.5901687, b: 1, a: 0.6666667}
 --- !u!4 &2108176017
 Transform:
@@ -973,7 +1041,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 7
+  m_RootOrder: 8
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!199 &2108176018
 ParticleSystemRenderer:
