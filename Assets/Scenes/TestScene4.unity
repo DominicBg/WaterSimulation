@@ -350,19 +350,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   count2:
-    x: 100
-    y: 100
-  scale:
-    x: 0.3
-    y: 0.3
-  startPos:
     x: 75
-    y: 5
-  iterationPerFrame: 4
+    y: 75
+  scale:
+    x: 0.25
+    y: 0.25
+  startPos:
+    x: 50
+    y: 50
+  iterationPerFrame: 1
+  rotationSpeed: 90
   SPH2DRenderer: {fileID: 2108176016}
-  G:
-    x: 0
-    y: -9.81
+  collisionScale: 10
+  rotation: 0
+  camera: {fileID: 1151430088}
+  Gravity: -9.81
   particleRadius: 0.5
   MASS: 6.5
   BOUND_DAMPING: -0.5
@@ -583,7 +585,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1151430084}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e8a636f62116c0a40bbfefdf876d4608, type: 3}
   m_Name: 
@@ -635,7 +637,7 @@ Camera:
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
-  m_projectionMatrixMode: 2
+  m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 1
   m_SensorSize: {x: 36, y: 24}
@@ -650,8 +652,8 @@ Camera:
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 67.380135
-  orthographic: 0
-  orthographic size: 5
+  orthographic: 1
+  orthographic size: 50.94
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -674,8 +676,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1151430084}
-  m_LocalRotation: {x: 0.12951685, y: 0.015771814, z: -0.002054478, w: 0.99144965}
-  m_LocalPosition: {x: 30.21389, y: 30.671154, z: -54.691395}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 33.884476, y: 48.74048, z: -260.4566}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -768,10 +770,12 @@ MonoBehaviour:
     x: 0
     y: 5
   iterationPerFrame: 0
+  rotationSpeed: 5
   SPH2DRenderer: {fileID: 2108176016}
-  G:
-    x: 0
-    y: -9.81
+  collisionScale: 10
+  rotation: 0
+  camera: {fileID: 0}
+  Gravity: -9.81
   particleRadius: 1.6
   MASS: 6.5
   BOUND_DAMPING: -0.5
@@ -977,7 +981,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 5500
   m_UseColorTemperature: 1
-  m_BoundingSphereOverride: {x: 5.84e-43, y: -5.858882e-10, z: 5.84e-43, w: -9.818439e-10}
+  m_BoundingSphereOverride: {x: 0, y: 2.7105054e-20, z: 2.3509887e-38, w: 0}
   m_UseBoundingSphereOverride: 0
   m_ShadowRadius: 0
   m_ShadowAngle: 0.53
@@ -1027,7 +1031,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   particleSystem: {fileID: 2108176019}
-  particleRadius: 5
+  particleRadius: 2
   color: {r: 0.4009434, g: 0.5901687, b: 1, a: 0.6666667}
 --- !u!4 &2108176017
 Transform:
